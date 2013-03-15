@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C# Express 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MulticastChat", "MulticastChat\MulticastChat.csproj", "{5D434DD8-3FBA-4B6D-8B4A-B652EA5FFCA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Multicast", "Multicast\Multicast.csproj", "{ABA59CAA-81AF-4998-BE10-8237EE378A04}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5D434DD8-3FBA-4B6D-8B4A-B652EA5FFCA3}.Debug|x86.ActiveCfg = Debug|x86
+		{5D434DD8-3FBA-4B6D-8B4A-B652EA5FFCA3}.Debug|x86.Build.0 = Debug|x86
+		{5D434DD8-3FBA-4B6D-8B4A-B652EA5FFCA3}.Release|x86.ActiveCfg = Release|x86
+		{5D434DD8-3FBA-4B6D-8B4A-B652EA5FFCA3}.Release|x86.Build.0 = Release|x86
+		{ABA59CAA-81AF-4998-BE10-8237EE378A04}.Debug|x86.ActiveCfg = Debug|x86
+		{ABA59CAA-81AF-4998-BE10-8237EE378A04}.Debug|x86.Build.0 = Debug|x86
+		{ABA59CAA-81AF-4998-BE10-8237EE378A04}.Release|x86.ActiveCfg = Release|x86
+		{ABA59CAA-81AF-4998-BE10-8237EE378A04}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
