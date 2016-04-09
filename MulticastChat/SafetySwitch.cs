@@ -26,11 +26,11 @@ namespace MulticastChat
 
             lock (startLock)
             {
-                if (_handler == null)
-                {
-                    _handler += new CtrlTypeHandler(handler);
-                    SetConsoleCtrlHandler(_handler, true);
+                if (_handler != null){
+                    return;
                 }
+                _handler += handler;
+                SetConsoleCtrlHandler(_handler, true);
             }
         }
     }

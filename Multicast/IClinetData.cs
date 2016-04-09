@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 
 namespace Multicast
@@ -12,34 +11,41 @@ namespace Multicast
         IPEndPoint GetSource();
 
         SocketFlags flags { get; }
+        
+        bool Local { get; }
     }
 
     class ClientDataEx : IClientData
     {
-        readonly IPEndPoint source;
-        readonly SocketFlags flags;
-        readonly byte[] data;
+        readonly IPEndPoint _source;
+        readonly SocketFlags _flags;
+        readonly byte[] _data;
 
         internal ClientDataEx(byte[] data, IPEndPoint source, SocketFlags flags)
         {
-            this.data = data;
-            this.source = source;
-            this.flags = flags;
+            _data = data;
+            _source = source;
+            _flags = flags;
         }
-
+        
         public IPEndPoint GetSource()
         {
-            return source;
+            return _source;
         }
 
         byte[] IClientData.data
         {
-            get { return data; }
+            get { return _data; }
         }
 
         SocketFlags IClientData.flags
         {
-            get { return flags; }
+            get { return _flags; }
+        }
+        
+        bool IClientData.Local
+        {
+            get { return AbstractMulticastService.isLocal(_source.Address); }
         }
     }
 }

@@ -19,60 +19,60 @@ namespace MulticastChat
     {
         const bool _DEBUG = true;
 
-        internal IDictionary<IPAddress, string> userCache = new Dictionary<IPAddress, string>();
-        internal IMulticastService service;
-        internal string status;
+        internal IDictionary<IPAddress, string> UserCache = new Dictionary<IPAddress, string>();
+        internal IMulticastService Service;
+        internal string Status;
 
-        internal Notification notification;
+        internal INotification Notification;
 
         Program(int port)
         {
 
             new Thread(new ThreadStart(InitNotification)).Start();
-            GUI.Status(status);
+            GUI.Status(Status);
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
-            service = new MulticastServiceAsync("224.5.6.7", port);
-            Dummy dummy = new Dummy(this);
+            Service = new MulticastServiceAsync("224.5.6.7", port);
+            
+            var dummy = new Dummy(this);
             ObserverHandler observer = new ObserverHandler(dummy.ClientData);
 
-            service.Observer += observer;
+            Service.Observer += observer;
 
-            while (notification == null) { Application.DoEvents();  };
-            notification.Click += new EventHandler(notification_Click);
+            while (Notification == null) { Application.DoEvents(); };
 
             Debug.WriteLine("Init.");
         }
 
         void InitNotification()
         {
-            notification = new Notification();
+            Notification = new NotifyIconNotification();
+            Notification.Click += NotificationClick;
             Application.Run();
         }
 
-        void notification_Click(object sender, EventArgs e)
+        void NotificationClick(object sender, EventArgs e)
         {
-            MouseEventArgs mouse = (MouseEventArgs)e;
-            notification.EndIconFlash();
-            notification.MainWindowFocus();
+            Notification.EndIconFlash();
+            GUI.MainWindowFocus();
         }
 
         void Start()
         {
-            if (service.Start(!_DEBUG))
-            {
-                service.Send(getData(State.Online, Environment.UserName));
-                service.Send(getData(State.Discover));
-                string line;
-                do
-                {
-                    line = Console.ReadLine();
-                    GUI.Status(status, "users: " + userCache.Count);
-                    if (line != null && line.Length > 0)
-                    {
-                        service.Send(getData(State.Message, line));
-                    }
-                } while (line != null);
+            if (!Service.Start(!_DEBUG)){
+                return;
             }
+            Service.Send(getData(State.Online, Environment.UserName));
+            Service.Send(getData(State.Discover));
+            string line;
+            do
+            {
+                line = Console.ReadLine();
+                GUI.Status(Status, "users: " + UserCache.Count);
+                if (!string.IsNullOrEmpty(line))
+                {
+                    Service.Send(getData(State.Message, line));
+                }
+            } while (line != null);
         }
 
         static void Main(string[] args)
@@ -110,19 +110,27 @@ namespace MulticastChat
 
         public void Dispose()
         {
-            service.Stop();
-            service.Send(getData(State.Offline, Environment.UserName));
-            notification.Dispose();
+            try
+            {
+                Service.Stop();
+                Service.Send(getData(State.Offline, Environment.UserName));
+                Notification.Dispose();             
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+            
         }
     }
 
     class Dummy : IObserver<IClientData>
     {
-        Program program;
+        Program _program;
 
         public Dummy(Program program)
         {
-            this.program = program;
+            _program = program;
         }
 
         public IObserver<IClientData> ClientData()
@@ -143,52 +151,55 @@ namespace MulticastChat
         public void OnNext(IClientData clientData)
         {
             byte[] data = clientData.data;
-            if (data.Length > 0)
-            {
-                IPAddress clientAddress = clientData.GetSource().Address;
-                string message = Encoding.UTF8.GetString(data, 1, data.Length - 1);
-                program.status = clientData.GetSource().ToString();
-
-                string time = DateTime.Now.ToString("[HH:mm:ss] ");
-
-                switch (data[0])
-                {
-                    case (int)State.Message:
-                        string user;
-                        if (!program.userCache.TryGetValue(clientAddress, out user))
-                        {
-                            user = clientAddress.ToString();
-                            program.service.Send(clientAddress, Program.getData(State.Discover));
-                        }
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine(time + user + ": " + message);
-                        program.notification.TrayNotify(message, user);
-                        program.notification.BeginIconFlash();
-                        break;
-                    case (int)State.Online:
-                        program.userCache[clientAddress] = message;
-                        if (clientData.flags == System.Net.Sockets.SocketFlags.Multicast)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine(time + message + " is online");
-                        }
-                        break;
-                    case (int)State.Offline:
-                        program.userCache.Remove(clientAddress);
-                        Console.ForegroundColor = ConsoleColor.DarkYellow;
-                        Console.WriteLine(time + message + " left...");
-                        break;
-                    case (int)State.Discover:
-                        program.service.Send(clientAddress, Program.getData(State.Online, Environment.UserName));
-                        break;
-                    default:
-                        Console.WriteLine(clientData.GetSource().Address + "[" + (MulticastService.isLocal(clientData.GetSource().Address) ? "local" : "remote") + "]: " + message);
-                        break;
-                }
-
-                GUI.Status(program.status, "users: " + program.userCache.Count);
-                Console.ResetColor();
+            if(data.Length <= 0){
+                return;
             }
+            var clientAddress = clientData.GetSource().Address;
+            var message = Encoding.UTF8.GetString(data, 1, data.Length - 1);
+            _program.Status = clientData.GetSource().ToString();
+
+            var time = DateTime.Now.ToString("[HH:mm:ss] ");
+
+            switch (data[0])
+            {
+                case (int)State.Message:
+                    string user;
+                    if (!_program.UserCache.TryGetValue(clientAddress, out user))
+                    {
+                        user = clientAddress.ToString();
+                        _program.Service.Send(clientAddress, Program.getData(State.Discover));
+                    }
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine(time + user + ": " + message);
+                    if(!clientData.Local)
+                    {
+                        _program.Notification.Show(message, user);
+                        _program.Notification.BeginIconFlash();
+                    }
+                    break;
+                case (int)State.Online:
+                    _program.UserCache[clientAddress] = message;
+                    if (clientData.flags == System.Net.Sockets.SocketFlags.Multicast)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine(time + message + " is online");
+                    }
+                    break;
+                case (int)State.Offline:
+                    _program.UserCache.Remove(clientAddress);
+                    Console.ForegroundColor = ConsoleColor.DarkYellow;
+                    Console.WriteLine(time + message + " left...");
+                    break;
+                case (int)State.Discover:
+                    _program.Service.Send(clientAddress, Program.getData(State.Online, Environment.UserName));
+                    break;
+                default:
+                    Console.WriteLine(clientData.GetSource().Address + "[" + (MulticastService.isLocal(clientData.GetSource().Address) ? "local" : "remote") + "]: " + message);
+                    break;
+            }
+
+            GUI.Status(_program.Status, "users: " + _program.UserCache.Count);
+            Console.ResetColor();
         }
     }
 }
